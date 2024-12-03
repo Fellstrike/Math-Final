@@ -1,18 +1,23 @@
 //setup and division arrays
-let cutOrderList, colors, buffer, bufferCount;
+let cutOrderList, colors, buffer, bufferCount, colorPalette;
+
 //variables
-let copyX, copyY, copyWidth, copyHeight, copyRotate, speedX, speedY;
+let origX, origY, origW, origH, copyX, copyY, copyWidth, copyHeight, copyRotate, speedX, speedY;
 
 let numRatios = true; //keeps track if the ratios shoud be labeled or not.
+let paused = false; //keeps track if things should be moving or not.
+
+let colorUse = [0, 0, 0, 0, 0, 0, 0, 0];
 
 // Ratio-based scaling and timing
-let depths = [1, 3, 4]; // Recursive depths
 let scales = [1, 0.75, 0.5]; // Scaling for large, medium, small sections
-let rotationDelays = [30, 15, 5]; // Rotation speeds for large, medium, small sections
+let rotationDelays = [5, 15, 30]; // Rotation speeds for large, medium, small sections
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  frameRate(60);
+  //frameRate(60);
+
+  imageMode(CENTER);
 
   // Define an 8-color palette
   colors = [
@@ -26,6 +31,10 @@ function setup() {
     color(255, 165, 0, 125),  // Orange
   ];
 
+  colorPalette = [];
+
+  let shuffledColors = shuffle(colors); //randomizes colors
+
   initializeCopyAttributes();
 
   cutOrderList = generateCutOrder();
@@ -35,7 +44,7 @@ function setup() {
 
   buffer = createGraphics(width, height);
   buffer.background(255);
-  divideCanvas(bufferCount, buffer, 0, 0, width, height, cutOrderList, "vertical", 5);
+  divideCanvas(bufferCount, buffer, 0, 0, width, height, cutOrderList, "vertical", 12, shuffledColors);
 }
 
 function draw() {
@@ -44,14 +53,14 @@ function draw() {
 
   if (numRatios) {
   // Draw the background ratio.
-  image(bufferCount, width * 0.001, height * 0.001, width * 0.99, height * 0.99);
+  image(bufferCount, origX, origY, origW, origH);
 
   // Draw the non-numbered and moving images
   drawTranslatedBuffers(bufferCount);
   }
-   {
+  else {
     // Draw the background ratio.
-    image(buffer, width * 0.001, height * 0.001, width * 0.99, height * 0.99);
+    image(buffer, origX, origY, origW, origH);
   
     // Draw the non-numbered and moving images
     drawTranslatedBuffers(buffer);
@@ -60,18 +69,26 @@ function draw() {
 
 // Initialize attributes for 8 moving pieces
 function initializeCopyAttributes() {
+  origX = width * 0.5;
+  origY = height * 0.5;
+  origW = width * 0.99;
+  origH = height * 0.99;
+
   copyX = Array(8).fill(0).map(() => random(width));
   copyY = Array(8).fill(0).map(() => random(height));
+  
   copyWidth = [
-    width * 0.5,  // Large piece
-    width * 0.25, width * 0.25, width * 0.25, // Medium pieces
-    width * 0.125, width * 0.125, width * 0.125, width * 0.125, // Small pieces
+    origW * 0.5,  // Large piece
+    origW * 0.25, origW * 0.25, origW * 0.25, // Medium pieces
+    origW * 0.125, origW * 0.125, origW * 0.125, origW * 0.125, // Small pieces
   ];
+  
   copyHeight = [
-    height * 0.5, // Large piece
-    height * 0.25, height * 0.25, height * 0.25, // Medium pieces
-    height * 0.125, height * 0.125, height * 0.125, height * 0.125, // Small pieces
+    origH * 0.5, // Large piece
+    origH * 0.25, origH * 0.25, origH * 0.25, // Medium pieces
+    origH * 0.125, origH * 0.125, origH * 0.125, origH * 0.125, // Small pieces
   ];
+  
   speedX = Array(8).fill(0).map(() => random(-4, 4));
   speedY = Array(8).fill(0).map(() => random(-4, 4));
   copyRotate = Array(8).fill(0).map(() => random(0, 360));
@@ -90,15 +107,17 @@ function generateCutOrder() {
 }
 
 // Recursive canvas division
-function divideCanvas(graphicsC, graphics, x, y, w, h, cutOrder, direction, curDepth) {
+function divideCanvas(graphicsC, graphics, x, y, w, h, cutOrder, direction, curDepth, shColors) {
   if (curDepth <= 0) return;
+
+  // Refresh the color palette for each divideCanvas call
+  if (colorPalette.length <= 0) {
+    colorPalette = prepareColorPalette(shColors);
+  }
 
   let ratios = random(cutOrder);
   let total = ratios[0] + ratios[1] + ratios[2];
   let sizes = ratios.map(r => (direction === "vertical" ? (h * r) / total : (w * r) / total));
-
-  // Assign recursive depths using the ratio
-  let sectionDepths = [depths[0], depths[1], depths[2]];
 
   for (let i = 0; i < 3; i++) {
     let newX = direction === "vertical" ? x : x + (i > 0 ? sizes.slice(0, i).reduce((a, b) => a + b) : 0);
@@ -106,8 +125,14 @@ function divideCanvas(graphicsC, graphics, x, y, w, h, cutOrder, direction, curD
     let newW = direction === "vertical" ? w : sizes[i];
     let newH = direction === "vertical" ? sizes[i] : h;
 
-    let randomColor = random(colors);
-    let textColor = getContrastingTextColor(randomColor); // Determine text color
+    // Assign a color from the shuffled palette
+    let randomColor = colorPalette.pop(); // Use a color
+    if (!randomColor) {
+      //console.error("Palette is empty or invalid at depth", curDepth);
+      colorPalette = prepareColorPalette(shColors); // Assign fallback
+      randomColor = colorPalette.pop();
+    }
+    let textColor = getContrastingTextColor(randomColor);
 
     graphics.fill(randomColor);
     graphics.stroke(0);
@@ -124,9 +149,10 @@ function divideCanvas(graphicsC, graphics, x, y, w, h, cutOrder, direction, curD
     graphicsC.text(ratios[i], newX + newW / 2, newY + newH / 2);
 
     let nextDirection = direction === "vertical" ? "horizontal" : "vertical";
-    divideCanvas(graphicsC, graphics, newX, newY, newW, newH, cutOrder, nextDirection, curDepth - sectionDepths[i]);
+    divideCanvas(graphicsC, graphics, newX, newY, newW, newH, cutOrder, nextDirection, curDepth -(6/ratios[i]), shColors);
   }
 }
+
 
 // Function to calculate contrasting text color
 function getContrastingTextColor(bgColor) {
@@ -142,41 +168,103 @@ function getContrastingTextColor(bgColor) {
   return luminance > 0.5 ? color(0) : color(255);
 }
 
+function prepareColorPalette(shuffledColors) {
+  let colorRatios = [4, 3, 1]; // The 4:3:1 ratio
+  let expandedColors = [];
+
+  //console.log(shuffledColors);
+
+  // Repeat colors according to the ratio
+  for (let i = 0; i < shuffledColors.length; i++) {
+    for (let j = 0; j < colorRatios[i % colorRatios.length]; j++) {
+      expandedColors.push(shuffledColors[i]);
+      colorUse[i]++;
+    }
+  }
+
+  // Shuffle the colors to create a randomized palette
+  return shuffle(expandedColors);
+}
 
 // Draw and animate buffer copies
 function drawTranslatedBuffers(graphicBuf) {
   for (let i = 0; i < copyX.length; i++) {
     let scaleIndex = i < 1 ? 0 : i < 4 ? 1 : 2;
 
+    let textY;
+
     push();
     translate(copyX[i], copyY[i]);
+    fill(20);
+    if (numRatios) {
+      switch(i) {
+        case 0:
+          textY = copyHeight[i] * 0.7;
+          break;
+        case 1:
+        case 2:
+        case 3:
+          textY = copyHeight[i] * 0.75;
+          break;
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+          textY = copyHeight[i] * 0.7;
+          break;
+      }
+      let deltaX = copyX[i] - origX;
+      let deltaY = copyY[i] - origY;
+      
+      // Avoid division by zero when calculating slope
+      let slope = deltaX !== 0 ? deltaY / deltaX : Infinity;
+      let yIntercept = deltaX !== 0 ? origY - slope * origX : "undefined";
+      
+      // Format slope and intercept for clarity
+      let slopeText = deltaX !== 0 ? `${round(slope, 2)}` : "undefined";
+      let interceptText = deltaX !== 0 ? `${round(yIntercept, 2)}` : "undefined";
+      
+      // Print the equation
+      let lineEquation = `y = ${slopeText}x + ${interceptText}`;
+      text(`Line Equation: ${lineEquation}`, 0, -textY);
+      text("Scale: " + copyWidth[i]/origW + " Translation:: (" + round(copyX[i] - origX, 2) + ", " + round(copyY[i] - origY, 2) +')', 0, -textY * 0.88);
+      text("Rotation: " + round(copyRotate[i], 1), 0, -textY * 0.77);
+    }
+
     rotate(copyRotate[i]);
     image(graphicBuf, 0, 0, copyWidth[i] * scales[scaleIndex], copyHeight[i] * scales[scaleIndex]);
     pop();
 
     // Animate positions
-    copyX[i] += speedX[i];
-    copyY[i] += speedY[i];
+    if (!paused) {
+      copyX[i] += speedX[i];
+      copyY[i] += speedY[i];
 
-    // Wrap positions when leaving canvas
-    if (copyX[i] - copyWidth[i] > width) copyX[i] = -copyWidth[i];
-    else if (copyX[i] + copyWidth[i] < 0) copyX[i] = width;
+      // Wrap positions when leaving canvas
+      if (copyX[i] - copyWidth[i] > width) copyX[i] = -copyWidth[i] + (copyX[i] - width);
+      else if (copyX[i] + copyWidth[i] < 0) copyX[i] = width - (copyWidth[i] + copyX[i]);
 
-    if (copyY[i] - copyHeight[i] > height) copyY[i] = -copyHeight[i];
-    else if (copyY[i] + copyHeight[i] < 0) copyY[i] = height;
+      if (copyY[i] - copyHeight[i] > height) copyY[i] = -copyHeight[i] + (copyY[i] - height);
+      else if (copyY[i] + copyHeight[i] < 0) copyY[i] = height - (copyHeight[i] + copyY[i]);
 
-    // Update rotation at different speeds
-    if (frameCount % rotationDelays[scaleIndex] === 0) {
-      copyRotate[i] += (i % 2 === 0 ? 0.01 : -0.01);
+      // Update rotation at different speeds
+      let rotationSpeed = 0.01 * scales[scaleIndex];
+      copyRotate[i] += (i % 2 === 0 ? rotationSpeed : -rotationSpeed);
     }
   }
 }
 
 function keyPressed() {
-  if (key === 'r') setup();
+  if (key === 'r') {
+    colorPalette = null;
+    setup();
+  }
   else if (key === ' ') numRatios = !numRatios;
+  else if (key === 'p') paused = !paused;
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  colorPalette = null;
+  initializeCopyAttributes();
 }

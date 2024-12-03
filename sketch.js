@@ -1,11 +1,12 @@
-let cutOrderList;
-let colors;
-let buffer;
-
+//setup and division arrays
+let cutOrderList, colors, buffer, bufferCount;
+//variables
 let copyX, copyY, copyWidth, copyHeight, copyRotate, speedX, speedY;
 
+let numRatios = true; //keeps track if the ratios shoud be labeled or not.
+
 // Ratio-based scaling and timing
-let depths = [2, 6, 8]; // Recursive depths
+let depths = [1, 3, 4]; // Recursive depths
 let scales = [1, 0.75, 0.5]; // Scaling for large, medium, small sections
 let rotationDelays = [30, 15, 5]; // Rotation speeds for large, medium, small sections
 
@@ -29,20 +30,32 @@ function setup() {
 
   cutOrderList = generateCutOrder();
 
+  bufferCount = createGraphics(width, height);
+  bufferCount.background(255);
+
   buffer = createGraphics(width, height);
   buffer.background(255);
-  divideCanvas(buffer, 0, 0, width, height, cutOrderList, "vertical", 8);
+  divideCanvas(bufferCount, buffer, 0, 0, width, height, cutOrderList, "vertical", 5);
 }
 
 function draw() {
   background(55);
   tint(255, 127);
 
-  // Draw the original buffer
-  image(buffer, width * 0.25, height * 0.25, width * 0.5, height * 0.5);
+  if (numRatios) {
+  // Draw the background ratio.
+  image(bufferCount, width * 0.001, height * 0.001, width * 0.99, height * 0.99);
 
-  // Draw shifted and scaled copies
-  drawTranslatedBuffers();
+  // Draw the non-numbered and moving images
+  drawTranslatedBuffers(bufferCount);
+  }
+   {
+    // Draw the background ratio.
+    image(buffer, width * 0.001, height * 0.001, width * 0.99, height * 0.99);
+  
+    // Draw the non-numbered and moving images
+    drawTranslatedBuffers(buffer);
+    }
 }
 
 // Initialize attributes for 8 moving pieces
@@ -77,7 +90,7 @@ function generateCutOrder() {
 }
 
 // Recursive canvas division
-function divideCanvas(graphics, x, y, w, h, cutOrder, direction, curDepth) {
+function divideCanvas(graphicsC, graphics, x, y, w, h, cutOrder, direction, curDepth) {
   if (curDepth <= 0) return;
 
   let ratios = random(cutOrder);
@@ -87,39 +100,58 @@ function divideCanvas(graphics, x, y, w, h, cutOrder, direction, curDepth) {
   // Assign recursive depths using the ratio
   let sectionDepths = [depths[0], depths[1], depths[2]];
 
-  // Distribute colors proportionally
-  let colorSegments = [
-    colors.slice(0, 1),     // 1 color for the smallest section
-    colors.slice(1, 4),     // 3 colors for the medium section
-    colors.slice(4, 8),     // 4 colors for the largest section
-  ];
-
   for (let i = 0; i < 3; i++) {
     let newX = direction === "vertical" ? x : x + (i > 0 ? sizes.slice(0, i).reduce((a, b) => a + b) : 0);
     let newY = direction === "vertical" ? y + (i > 0 ? sizes.slice(0, i).reduce((a, b) => a + b) : 0) : y;
     let newW = direction === "vertical" ? w : sizes[i];
     let newH = direction === "vertical" ? sizes[i] : h;
 
-    let randomColor = random(colorSegments[i]);
+    let randomColor = random(colors);
+    let textColor = getContrastingTextColor(randomColor); // Determine text color
 
     graphics.fill(randomColor);
     graphics.stroke(0);
     graphics.rect(newX, newY, newW, newH);
 
+    graphicsC.fill(randomColor);
+    graphicsC.stroke(0);
+    graphicsC.rect(newX, newY, newW, newH);
+
+    // Set text properties
+    graphicsC.fill(textColor);
+    graphicsC.textSize((sizes[0] + sizes[1] + sizes[2]) * 0.05);
+    graphicsC.textAlign(CENTER, CENTER);
+    graphicsC.text(ratios[i], newX + newW / 2, newY + newH / 2);
+
     let nextDirection = direction === "vertical" ? "horizontal" : "vertical";
-    divideCanvas(graphics, newX, newY, newW, newH, cutOrder, nextDirection, curDepth - sectionDepths[i]);
+    divideCanvas(graphicsC, graphics, newX, newY, newW, newH, cutOrder, nextDirection, curDepth - sectionDepths[i]);
   }
 }
 
+// Function to calculate contrasting text color
+function getContrastingTextColor(bgColor) {
+  // Convert p5.js color to RGB
+  let r = red(bgColor);
+  let g = green(bgColor);
+  let b = blue(bgColor);
+
+  // Calculate luminance
+  let luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Return black or white based on luminance
+  return luminance > 0.5 ? color(0) : color(255);
+}
+
+
 // Draw and animate buffer copies
-function drawTranslatedBuffers() {
+function drawTranslatedBuffers(graphicBuf) {
   for (let i = 0; i < copyX.length; i++) {
     let scaleIndex = i < 1 ? 0 : i < 4 ? 1 : 2;
 
     push();
     translate(copyX[i], copyY[i]);
     rotate(copyRotate[i]);
-    image(buffer, 0, 0, copyWidth[i] * scales[scaleIndex], copyHeight[i] * scales[scaleIndex]);
+    image(graphicBuf, 0, 0, copyWidth[i] * scales[scaleIndex], copyHeight[i] * scales[scaleIndex]);
     pop();
 
     // Animate positions
@@ -138,4 +170,13 @@ function drawTranslatedBuffers() {
       copyRotate[i] += (i % 2 === 0 ? 0.01 : -0.01);
     }
   }
+}
+
+function keyPressed() {
+  if (key === 'r') setup();
+  else if (key === ' ') numRatios = !numRatios;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }

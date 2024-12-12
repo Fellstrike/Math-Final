@@ -6,6 +6,7 @@ let origX, origY, origW, origH, copyX, copyY, copyWidth, copyHeight, copyRotate,
 
 let numRatios = false; //keeps track if the ratios shoud be labeled or not.
 let paused = false; //keeps track if things should be moving or not.
+let hidden = false; //hides or unhides the control prompt.
 
 // Ratio-based scaling and timing
 let scales = [1.2, 0.9, 0.3]; // Scaling for large, medium, small sections
@@ -30,8 +31,9 @@ function setup() {
     color(255, 255, 0, 125),  // Yellow
     color(255, 0, 255, 125),  // Purple
     color(0, 255, 255, 125),  // Teal
-    color(128, 0, 128, 125),  // Indigo
-    color(255, 165, 0, 125),  // Orange
+    color(128, 0, 255, 125),  // Indigo
+    color(255, 128, 0, 125),  // Orange
+		 color(0, 255, 128, 125)   // mint
   ];
 
   colorPalette = [];
@@ -70,6 +72,16 @@ function draw() {
     // Draw the non-numbered and moving images
     drawTranslatedBuffers(buffer);
     }
+	
+	if (!hidden) {
+			textAlign(RIGHT, TOP);
+			textSize(height*0.03);
+			fill(255, 255, 255, 125);
+			text("Press Spacebar to show some of the math.", width * 0.99, height * 0.01);
+			text("Press 'P' to pause movement.", width * 0.99, height * 0.05);
+			text("Press 'R' to Reload the Sketch.", width * 0.99, height	* 0.09);
+			text("Press 'H' to Hide this.", width * 0.99, height * 0.13);
+	}
 }
 
 // Initialize attributes for 8 moving pieces
@@ -285,6 +297,7 @@ function keyPressed() {
   }
   else if (key === ' ') numRatios = !numRatios;
   else if (key === 'p') paused = !paused;
+	else if (key === 'h') hidden = !hidden;
 }
 
 function windowResized() {

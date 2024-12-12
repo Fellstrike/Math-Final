@@ -4,18 +4,15 @@ let cutOrderList, colors, buffer, bufferCount, colorPalette;
 //variables
 let origX, origY, origW, origH, copyX, copyY, copyWidth, copyHeight, copyRotate, speedX, speedY;
 
-let numRatios = true; //keeps track if the ratios shoud be labeled or not.
+let numRatios = false; //keeps track if the ratios shoud be labeled or not.
 let paused = false; //keeps track if things should be moving or not.
 
-let colorUse = [0, 0, 0, 0, 0, 0, 0, 0];
-
 // Ratio-based scaling and timing
-let scales = [1, 0.75, 0.5]; // Scaling for large, medium, small sections
-let rotationDelays = [5, 15, 30]; // Rotation speeds for large, medium, small sections
+let scales = [1.2, 0.9, 0.3]; // Scaling for large, medium, small sections
+let rotationDelays = [0.25, 0.75, 1]; // Rotation speeds for large, medium, small sections
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  //frameRate(60);
 
   imageMode(CENTER);
 
@@ -178,7 +175,6 @@ function prepareColorPalette(shuffledColors) {
   for (let i = 0; i < shuffledColors.length; i++) {
     for (let j = 0; j < colorRatios[i % colorRatios.length]; j++) {
       expandedColors.push(shuffledColors[i]);
-      colorUse[i]++;
     }
   }
 
@@ -248,7 +244,7 @@ function drawTranslatedBuffers(graphicBuf) {
       else if (copyY[i] + copyHeight[i] < 0) copyY[i] = height - (copyHeight[i] + copyY[i]);
 
       // Update rotation at different speeds
-      let rotationSpeed = 0.01 * scales[scaleIndex];
+      let rotationSpeed = 0.01 * rotationDelays[scaleIndex];
       copyRotate[i] += (i % 2 === 0 ? rotationSpeed : -rotationSpeed);
     }
   }

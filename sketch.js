@@ -54,7 +54,7 @@ function setup() {
 
 function draw() {
   image(vidCap, width/2, height/2);
-  filter(INVERT);
+  //filter(INVERT);
   
   tint(255, 127);
 

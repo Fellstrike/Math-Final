@@ -11,8 +11,14 @@ let paused = false; //keeps track if things should be moving or not.
 let scales = [1.2, 0.9, 0.3]; // Scaling for large, medium, small sections
 let rotationDelays = [0.25, 0.75, 1]; // Rotation speeds for large, medium, small sections
 
+let vidCap;
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
+
+  vidCap = createCapture(VIDEO);
+  vidCap.size(width, height);
+  vidCap.hide();
 
   imageMode(CENTER);
 
@@ -45,7 +51,9 @@ function setup() {
 }
 
 function draw() {
-  background(55);
+  image(vidCap, width/2, height/2);
+  filter(INVERT);
+  
   tint(255, 127);
 
   if (numRatios) {

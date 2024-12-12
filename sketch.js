@@ -250,6 +250,26 @@ function drawTranslatedBuffers(graphicBuf) {
   }
 }
 
+function mousePressed() {
+  if (mousePressed === LEFT) numRatios = !numRatios;
+  else if (mousePressed === RIGHT) paused = !paused;
+  else if (mousePressed === CENTER) {
+    colorPalette = null;
+    setup();
+  }
+}
+
+function touchStarted() {
+  switch (touches.length) {
+    case 1:
+      numRatios = !numRatios;
+      break;
+    case 2:
+      paused = !paused;
+      break;
+  }
+}
+
 function keyPressed() {
   if (key === 'r') {
     colorPalette = null;
